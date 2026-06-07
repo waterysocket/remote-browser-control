@@ -38,5 +38,3 @@ npm run start
 ## Requirements
 - Node.js 18.17 or later
 - npm (comes with Node.js)
-
-

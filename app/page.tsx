@@ -9,6 +9,7 @@ export default function Home() {
   const [status, setStatus] = useState<Status>("idle");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [containerId, setContainerId] = useState<string | null>(null);
+  const [port, setPort] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleStart = async () => {
@@ -30,6 +31,7 @@ export default function Home() {
       const data = await res.json();
       setSessionId(data.sessionId);
       setContainerId(data.containerId);
+      setPort(data.port);
       setStatus("active");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Unknown error");
@@ -55,6 +57,7 @@ export default function Home() {
 
       setSessionId(null);
       setContainerId(null);
+      setPort(null);
       setStatus("idle");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Unknown error");
@@ -107,6 +110,12 @@ export default function Home() {
               <div className={styles.sessionRow}>
                 <span className={styles.sessionLabel}>CONTAINER ID</span>
                 <code className={styles.sessionId}>{containerId}</code>
+              </div>
+            )}
+            {port && (
+              <div className={styles.sessionRow}>
+                <span className={styles.sessionLabel}>BROWSER PORT</span>
+                <code className={styles.sessionId}>localhost:{port}</code>
               </div>
             )}
           </div>

@@ -7,18 +7,17 @@ export async function POST() {
   const sessionId = randomUUID();
 
   try {
-    // 1. Start Docker container
-    const containerId = await startBrowserContainer();
+    const { containerId, port } = await startBrowserContainer();
 
-    // 2. Store sessionId <-> containerId
-    saveSession(sessionId, containerId);
+    saveSession(sessionId, { containerId, port });
 
-    console.log(`[session:start] sessionId=${sessionId} containerId=${containerId.slice(0, 12)}`);
+    console.log(`[session:start] sessionId=${sessionId} containerId=${containerId.slice(0, 12)} port=${port}`);
 
     return NextResponse.json(
       {
         sessionId,
-        containerId: containerId.slice(0, 12), // short ID for display
+        containerId: containerId.slice(0, 12),
+        port,
         startedAt: new Date().toISOString(),
       },
       { status: 200 }
