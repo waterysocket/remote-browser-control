@@ -3,12 +3,63 @@
 import { useState } from "react";
 import styles from "./page.module.css";
 
-export default function Home() {
-  const [status, setStatus] = useState<"idle" | "loading" | "active">("idle");
+type Status = "idle" | "loading" | "active" | "stopping" | "error";
 
-  const handleStart = () => {
+export default function Home() {
+  const [status, setStatus] = useState<Status>("idle");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [containerId, setContainerId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleStart = async () => {
     setStatus("loading");
-    setTimeout(() => setStatus("active"), 1800);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/browser/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timestamp: Date.now() }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Server responded with ${res.status}`);
+      }
+
+      const data = await res.json();
+      setSessionId(data.sessionId);
+      setContainerId(data.containerId);
+      setStatus("active");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Unknown error");
+      setStatus("error");
+    }
+  };
+
+  const handleStop = async () => {
+    if (!sessionId) return;
+    setStatus("stopping");
+
+    try {
+      const res = await fetch("/api/browser/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Stop failed with ${res.status}`);
+      }
+
+      setSessionId(null);
+      setContainerId(null);
+      setStatus("idle");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Unknown error");
+      setStatus("error");
+    }
   };
 
   return (
@@ -32,40 +83,51 @@ export default function Home() {
           Initialize a new browser session to begin your workflow.
         </p>
 
+        {/* ── Main Button ── */}
         <button
-          className={`${styles.button} ${status === "loading" ? styles.loading : ""} ${status === "active" ? styles.active : ""}`}
-          onClick={handleStart}
-          disabled={status !== "idle"}
+          className={`${styles.button} ${status === "loading" ? styles.loading : ""} ${status === "active" ? styles.active : ""} ${status === "error" ? styles.error : ""} ${status === "stopping" ? styles.loading : ""}`}
+          onClick={status === "idle" || status === "error" ? handleStart : undefined}
+          disabled={status === "loading" || status === "active" || status === "stopping"}
         >
-          {status === "idle" && (
-            <>
-              <span className={styles.buttonIcon}>▶</span>
-              Start Browser
-            </>
-          )}
-          {status === "loading" && (
-            <>
-              <span className={styles.spinner} />
-              Initializing…
-            </>
-          )}
-          {status === "active" && (
-            <>
-              <span className={styles.buttonIcon}>●</span>
-              Session Active
-            </>
-          )}
+          {status === "idle"     && <><span className={styles.buttonIcon}>▶</span>Start Browser</>}
+          {status === "loading"  && <><span className={styles.spinner} />Starting Container…</>}
+          {status === "active"   && <><span className={styles.buttonIcon}>●</span>Browser Running</>}
+          {status === "stopping" && <><span className={styles.spinner} />Stopping…</>}
+          {status === "error"    && <><span className={styles.buttonIcon}>✕</span>Retry</>}
         </button>
 
+        {/* ── Session + Container info ── */}
+        {status === "active" && sessionId && (
+          <div className={styles.sessionBox}>
+            <div className={styles.sessionRow}>
+              <span className={styles.sessionLabel}>SESSION ID</span>
+              <code className={styles.sessionId}>{sessionId}</code>
+            </div>
+            {containerId && (
+              <div className={styles.sessionRow}>
+                <span className={styles.sessionLabel}>CONTAINER ID</span>
+                <code className={styles.sessionId}>{containerId}</code>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Error message ── */}
+        {status === "error" && errorMsg && (
+          <p className={styles.errorMsg}>⚠ {errorMsg}</p>
+        )}
+
+        {/* ── Stop button when active ── */}
         {status === "active" && (
-          <p className={styles.hint}>
-            Browser session is running. Close the tab to end it.
-          </p>
+          <button className={styles.stopBtn} onClick={handleStop}>
+            ■ Stop &amp; Kill Container
+          </button>
         )}
       </div>
 
       <p className={styles.footer}>
-        READY <span className={styles.dot} />
+        {status === "active" ? "RUNNING" : status === "stopping" ? "STOPPING" : "READY"}{" "}
+        <span className={`${styles.dot} ${status === "active" ? styles.dotActive : ""}`} />
       </p>
     </main>
   );
