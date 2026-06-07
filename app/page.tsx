@@ -3,12 +3,45 @@
 import { useState } from "react";
 import styles from "./page.module.css";
 
-export default function Home() {
-  const [status, setStatus] = useState<"idle" | "loading" | "active">("idle");
+type Status = "idle" | "loading" | "active" | "error";
 
-  const handleStart = () => {
+export default function Home() {
+  const [status, setStatus] = useState<Status>("idle");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    // Disable button immediately
     setStatus("loading");
-    setTimeout(() => setStatus("active"), 1800);
+    setErrorMsg(null);
+
+    try {
+      // POST /api/browser/start — visible in DevTools Network tab
+      const res = await fetch("/api/browser/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timestamp: Date.now() }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Save sessionId in state
+      setSessionId(data.sessionId);
+      setStatus("active");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Unknown error");
+      setStatus("error");
+    }
+  };
+
+  const handleReset = () => {
+    setStatus("idle");
+    setSessionId(null);
+    setErrorMsg(null);
   };
 
   return (
@@ -32,40 +65,50 @@ export default function Home() {
           Initialize a new browser session to begin your workflow.
         </p>
 
+        {/* ── Main Button ── */}
         <button
-          className={`${styles.button} ${status === "loading" ? styles.loading : ""} ${status === "active" ? styles.active : ""}`}
+          className={`${styles.button} ${status === "loading" ? styles.loading : ""} ${status === "active" ? styles.active : ""} ${status === "error" ? styles.error : ""}`}
           onClick={handleStart}
-          disabled={status !== "idle"}
+          disabled={status === "loading" || status === "active"}
         >
           {status === "idle" && (
-            <>
-              <span className={styles.buttonIcon}>▶</span>
-              Start Browser
-            </>
+            <><span className={styles.buttonIcon}>▶</span>Start Browser</>
           )}
           {status === "loading" && (
-            <>
-              <span className={styles.spinner} />
-              Initializing…
-            </>
+            <><span className={styles.spinner} />Initializing…</>
           )}
           {status === "active" && (
-            <>
-              <span className={styles.buttonIcon}>●</span>
-              Session Active
-            </>
+            <><span className={styles.buttonIcon}>●</span>Browser Running</>
+          )}
+          {status === "error" && (
+            <><span className={styles.buttonIcon}>✕</span>Retry</>
           )}
         </button>
 
+        {/* ── Session ID pill ── */}
+        {status === "active" && sessionId && (
+          <div className={styles.sessionBox}>
+            <span className={styles.sessionLabel}>SESSION ID</span>
+            <code className={styles.sessionId}>{sessionId}</code>
+          </div>
+        )}
+
+        {/* ── Error message ── */}
+        {status === "error" && errorMsg && (
+          <p className={styles.errorMsg}>⚠ {errorMsg}</p>
+        )}
+
+        {/* ── Reset link when active ── */}
         {status === "active" && (
-          <p className={styles.hint}>
-            Browser session is running. Close the tab to end it.
-          </p>
+          <button className={styles.resetBtn} onClick={handleReset}>
+            End session
+          </button>
         )}
       </div>
 
       <p className={styles.footer}>
-        READY <span className={styles.dot} />
+        {status === "active" ? "RUNNING" : "READY"}{" "}
+        <span className={`${styles.dot} ${status === "active" ? styles.dotActive : ""}`} />
       </p>
     </main>
   );
