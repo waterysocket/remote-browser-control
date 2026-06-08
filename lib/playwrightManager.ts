@@ -28,7 +28,7 @@ export async function connectSession(sessionId: string, port: number): Promise<v
   if (sessions.has(sessionId)) return; // already connected
 
   // Browserless exposes a CDP WebSocket endpoint at /chromium/cdp
-  const wsEndpoint = `ws://localhost:${port}/chromium/cdp`;
+  const wsEndpoint = `ws://localhost:${port}/json/version`;
   console.log(`[pw] connecting to ${wsEndpoint}`);
 
   const browser = await chromium.connectOverCDP(wsEndpoint);
