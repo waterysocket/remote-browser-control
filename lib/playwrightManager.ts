@@ -3,12 +3,8 @@
  * Stored on globalThis to survive Next.js hot reloads.
  */
 
-/**
- * Manages Playwright browser connections per session.
- * Stored on globalThis to survive Next.js hot reloads.
- */
-
 import { chromium, Browser, Page } from "playwright-core";
+import { BROWSERLESS_TOKEN } from "@/lib/docker";
 
 interface PlaywrightSession {
   browser: Browser;
@@ -84,7 +80,7 @@ export async function connectSession(sessionId: string, port: number): Promise<v
 
   // Browserless v2 exposes its CDP WebSocket at /chromium (not /json/version —
   // that path is HTTP-only and returns 404 when used as a WebSocket endpoint).
-  const wsEndpoint = `ws://localhost:${port}/chromium`;
+  const wsEndpoint = `ws://localhost:${port}/chromium?token=${BROWSERLESS_TOKEN}`;
   console.log(`[pw] connecting to ${wsEndpoint}`);
 
   const browser = await chromium.connectOverCDP(wsEndpoint);

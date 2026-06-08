@@ -7,6 +7,11 @@ const execAsync = promisify(exec);
 
 const DOCKER_IMAGE = "ghcr.io/browserless/chromium:latest";
 
+// A fixed token is required by Browserless — the same value must be passed
+// in the WebSocket URL when Playwright connects.
+// Override via BROWSERLESS_TOKEN env var in production.
+export const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN ?? "local";
+
 /** Finds a free TCP port on the host */
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -23,13 +28,8 @@ function getFreePort(): Promise<number> {
 }
 
 /**
- * Polls the Browserless /json/version endpoint until it responds with 200
- * (meaning Chromium is ready to accept CDP connections), or until the
- * timeout expires.
- *
- * @param port    Host port the container is mapped to
- * @param timeout Max milliseconds to wait (default 30 s)
- * @param interval Polling interval in milliseconds (default 500 ms)
+ * Polls the Browserless /json/version endpoint until it responds with 200,
+ * meaning Chromium is ready to accept CDP connections.
  */
 export function waitForBrowserReady(
   port: number,
@@ -76,7 +76,6 @@ export function waitForBrowserReady(
 
 /**
  * Starts a Docker container running a headless Chromium browser.
- * Uses a random free host port to avoid port conflicts.
  * Returns { containerId, port }.
  */
 export async function startBrowserContainer(): Promise<{
@@ -90,6 +89,14 @@ export async function startBrowserContainer(): Promise<{
     "docker run -d --rm",
     `-p ${port}:3000`,
     `--name ${containerName}`,
+    // Keep the session alive for up to 10 minutes of total time,
+    // and allow unlimited inactivity (no idle disconnect).
+    `-e TIMEOUT=600000`,
+    `-e IDLE_TIMEOUT=0`,
+    // Token must match what Playwright passes in the WebSocket URL.
+    `-e TOKEN=${BROWSERLESS_TOKEN}`,
+    // Only one session per container (1:1 model).
+    `-e CONCURRENT=1`,
     DOCKER_IMAGE,
   ].join(" ");
 
