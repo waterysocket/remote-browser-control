@@ -40,11 +40,17 @@ export function waitForBrowserReady(
     const deadline = Date.now() + timeout;
 
     function attempt() {
+      // Include the token so Browserless doesn't reject with 401.
+      // Accept any HTTP response (even 4xx) — if the server replied at all,
+      // the container is up and Playwright can connect.
+      const path = `/json/version?token=${BROWSERLESS_TOKEN}`;
       const req = http.get(
-        { hostname: "localhost", port, path: "/json/version", timeout: 2000 },
+        { hostname: "localhost", port, path, timeout: 2000 },
         (res) => {
-          if (res.statusCode === 200) {
-            console.log(`[docker] browser ready on port ${port}`);
+          // Drain the response body to free the socket
+          res.resume();
+          if (res.statusCode && res.statusCode < 500) {
+            console.log(`[docker] browser ready on port ${port} (status ${res.statusCode})`);
             resolve();
           } else {
             retry();
