@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as net from "net";
+import * as http from "http";
 
 const execAsync = promisify(exec);
 
@@ -22,11 +23,66 @@ function getFreePort(): Promise<number> {
 }
 
 /**
+ * Polls the Browserless /json/version endpoint until it responds with 200
+ * (meaning Chromium is ready to accept CDP connections), or until the
+ * timeout expires.
+ *
+ * @param port    Host port the container is mapped to
+ * @param timeout Max milliseconds to wait (default 30 s)
+ * @param interval Polling interval in milliseconds (default 500 ms)
+ */
+export function waitForBrowserReady(
+  port: number,
+  timeout = 30_000,
+  interval = 500
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const deadline = Date.now() + timeout;
+
+    function attempt() {
+      const req = http.get(
+        { hostname: "localhost", port, path: "/json/version", timeout: 2000 },
+        (res) => {
+          if (res.statusCode === 200) {
+            console.log(`[docker] browser ready on port ${port}`);
+            resolve();
+          } else {
+            retry();
+          }
+        }
+      );
+      req.on("error", retry);
+      req.on("timeout", () => {
+        req.destroy();
+        retry();
+      });
+    }
+
+    function retry() {
+      if (Date.now() >= deadline) {
+        reject(
+          new Error(
+            `Browser container on port ${port} did not become ready within ${timeout}ms`
+          )
+        );
+      } else {
+        setTimeout(attempt, interval);
+      }
+    }
+
+    attempt();
+  });
+}
+
+/**
  * Starts a Docker container running a headless Chromium browser.
  * Uses a random free host port to avoid port conflicts.
  * Returns { containerId, port }.
  */
-export async function startBrowserContainer(): Promise<{ containerId: string; port: number }> {
+export async function startBrowserContainer(): Promise<{
+  containerId: string;
+  port: number;
+}> {
   const port = await getFreePort();
   const containerName = `browser-session-${Date.now()}`;
 
@@ -43,10 +99,14 @@ export async function startBrowserContainer(): Promise<{ containerId: string; po
 
   const containerId = stdout.trim();
   if (!containerId) {
-    throw new Error(`Docker start failed: ${stderr.trim() || "empty container ID"}`);
+    throw new Error(
+      `Docker start failed: ${stderr.trim() || "empty container ID"}`
+    );
   }
 
-  console.log(`[docker] started container: ${containerId.slice(0, 12)} on port ${port}`);
+  console.log(
+    `[docker] started container: ${containerId.slice(0, 12)} on port ${port}`
+  );
   return { containerId, port };
 }
 
