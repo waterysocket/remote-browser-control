@@ -140,6 +140,27 @@ export async function sendScroll(sessionId: string, x: number, y: number, deltaY
 }
 
 /**
+ * Goes back in the browser history.
+ */
+export async function goBack(sessionId: string): Promise<void> {
+  return withSession(sessionId, (s) => s.page.goBack().then(() => undefined));
+}
+
+/**
+ * Goes forward in the browser history.
+ */
+export async function goForward(sessionId: string): Promise<void> {
+  return withSession(sessionId, (s) => s.page.goForward().then(() => undefined));
+}
+
+/**
+ * Reloads the current page.
+ */
+export async function reloadPage(sessionId: string): Promise<void> {
+  return withSession(sessionId, (s) => s.page.reload().then(() => undefined));
+}
+
+/**
  * Navigates the page to a given URL.
  */
 export async function navigateTo(sessionId: string, url: string): Promise<void> {

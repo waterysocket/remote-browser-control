@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendClick, sendKey, sendType, sendScroll, navigateTo } from "@/lib/playwrightManager";
+import { sendClick, sendKey, sendType, sendScroll, navigateTo, goBack, goForward, reloadPage } from "@/lib/playwrightManager";
 
 export async function POST(req: NextRequest) {
   let body: { sessionId: string; type: string; x?: number; y?: number; key?: string; text?: string; deltaY?: number; url?: string };
@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
       await sendScroll(sessionId, x, y, deltaY);
     } else if (type === "navigate" && url) {
       await navigateTo(sessionId, url);
+    } else if (type === "back") {
+      await goBack(sessionId);
+    } else if (type === "forward") {
+      await goForward(sessionId);
+    } else if (type === "reload") {
+      await reloadPage(sessionId);
     } else {
       return NextResponse.json({ error: "Unknown or incomplete interaction" }, { status: 400 });
     }

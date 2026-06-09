@@ -340,6 +340,56 @@
   cursor: pointer;
 }
 
+/* ── Nav buttons ── */
+.navButtons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.navBtn:hover {
+  background: #242424;
+  border-color: #3a3a3a;
+  color: var(--text);
+}
+
+.navBtn:active {
+  background: #1e1e1e;
+}
+
+/* ── FPS pill ── */
+.fpsPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .stopBtnSmall {
   display: flex;
   align-items: center;

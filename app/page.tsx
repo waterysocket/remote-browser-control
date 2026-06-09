@@ -15,11 +15,13 @@ export default function Home() {
   const [port, setPort] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState("https://www.google.com");
+  const [fps, setFps] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const evtSourceRef = useRef<EventSource | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fpsCounterRef = useRef({ count: 0, last: Date.now() });
 
   // ── Start session ──────────────────────────────────────────────
   const handleStart = async () => {
@@ -94,6 +96,15 @@ export default function Home() {
     es.onmessage = (e) => {
       img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       img.src = `data:image/jpeg;base64,${e.data}`;
+      // FPS tracking
+      const fc = fpsCounterRef.current;
+      fc.count++;
+      const now = Date.now();
+      if (now - fc.last >= 1000) {
+        setFps(fc.count);
+        fc.count = 0;
+        fc.last = now;
+      }
     };
 
     es.addEventListener("error", (e) => {
@@ -202,6 +213,31 @@ export default function Home() {
     <main className={styles.viewerMain}>
       {/* Top bar */}
       <div className={styles.toolbar}>
+        {/* Navigation buttons */}
+        <div className={styles.navButtons}>
+          <button
+            className={styles.navBtn}
+            onClick={() => interact({ type: "back" })}
+            title="Go back"
+          >
+            ←
+          </button>
+          <button
+            className={styles.navBtn}
+            onClick={() => interact({ type: "forward" })}
+            title="Go forward"
+          >
+            →
+          </button>
+          <button
+            className={styles.navBtn}
+            onClick={() => interact({ type: "reload" })}
+            title="Reload"
+          >
+            ↻
+          </button>
+        </div>
+
         <div className={styles.sessionPill}>
           <span className={styles.dot} style={{ background: "var(--accent)" }} />
           <span>{containerId}</span>
@@ -218,6 +254,12 @@ export default function Home() {
           />
           <button type="submit" className={styles.goBtn}>Go</button>
         </form>
+
+        {/* FPS indicator */}
+        <div className={styles.fpsPill}>
+          <span className={`${styles.dot} ${styles.dotActive}`} />
+          <span>{fps} fps</span>
+        </div>
 
         <button
           className={styles.stopBtnSmall}
@@ -241,10 +283,6 @@ export default function Home() {
           tabIndex={0}
         />
       </div>
-
-      <p className={styles.footer} style={{ position: "fixed", bottom: 12, right: 20 }}>
-        STREAMING 20fps <span className={`${styles.dot} ${styles.dotActive}`} />
-      </p>
     </main>
   );
 }
