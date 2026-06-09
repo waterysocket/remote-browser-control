@@ -51,7 +51,7 @@ Use cases include automated QA, web scraping previews, sandboxed browsing, kiosk
 ### 1 — Clone and install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/waterysocket/remote-browser-control.git
 cd remote-browser-control
 npm install
 ```
